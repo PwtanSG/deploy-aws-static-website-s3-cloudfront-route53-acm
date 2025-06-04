@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation Template for SSL/TLS Certificate Generation'
+# aws cloudformation create-stack --stack-name CertificateStack1 --template-body file://infrastructure/CF-acm-cert-template.yaml --region us-east-1 --profile admin
+
+Parameters:
+  WebsiteDomainName:
+    Type: String
+    Description: "Domain name of website"
+    Default: "devbranch.online"
+    # Default: "demo-work.online"
+  SubDomain:
+    Type: String
+    Description: "Sub Domain name of website"
+    Default: "www"
+
+Resources:
+  mySSLCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref WebsiteDomainName
+      SubjectAlternativeNames:
+        - !Join [".", [!Ref SubDomain, !Ref WebsiteDomainName]]
+      ValidationMethod: DNS
+
+  # MyHostedZone:
+  #   Type: AWS::Route53::HostedZone
+  #   Properties:
+  #     Name: !Ref WebsiteDomainName  # create hostedzone with the same name as domain
+
+## ======================= OUTPUT ====================== ##
+Outputs: 
+  outputCertificateArn:
+    Description: Issued SSL certificate Arn
+    Value: !Ref mySSLCertificate
+
+  # outputRoute53HostedZoneId:
+  #   Description: Public hosted zone ID (such as Z23ABC4XYZL05B)
+  #   Value: !GetAtt MyHostedZone.Id # the same as !Ref myRoute53HostedZone  
+    
+  # outputRoute53HostedZoneNameServers:
+  #   Description: List of name servers for newly created public hosted zone
+  #   Value: !Join [', ', !GetAtt MyHostedZone.NameServers] 
+
