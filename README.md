@@ -38,3 +38,7 @@ Alternate domain name (CNAME) e.g domain.com &/or www.domain.com and Custom SSL 
 - copy html file to S3 buckets : 
 - aws s3 cp index.html s3://bucket-name
 - aws s3 cp build s3://bucket-name/ --recursive
+
+## invalidating cloudfront cache
+New content may take time to propagate down due to cloudfront cache. Use invalidation aws cli to refresh cache. <br>
+aws cloudfront create-invalidation --distribution-id DistributionID --paths "/*"
