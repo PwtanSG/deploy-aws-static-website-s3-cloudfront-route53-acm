@@ -1,9 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: A basic infra template for static hosting using S3 bucket, CloudFront and Route53
+Description: A basic infra template for static hosting using S3 bucket, CloudFront, Route53 and ACM SSL cert
 # Usage - AWS CLI :  
 # aws cloudformation create-stack --stack-name CreateInfra1 --template-body file://infrastructure/CF-s3-cloudfront-route53-acm-template.yaml --region us-east-1 --profile admin
-# copy html file to S3 bucket : 
-# aws s3 cp index.html s3://<www-bucket-name>
 
 Parameters:
   WebsiteDomainName:

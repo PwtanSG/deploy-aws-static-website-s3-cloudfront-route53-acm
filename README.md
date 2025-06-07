@@ -42,3 +42,6 @@ Alternate domain name (CNAME) e.g domain.com &/or www.domain.com and Custom SSL 
 ## invalidating cloudfront cache
 New content may take time to propagate down due to cloudfront cache. Use invalidation aws cli to refresh cache. <br>
 aws cloudfront create-invalidation --distribution-id DistributionID --paths "/*"
+
+## Architectural Diagram
+![screenshot](images/architectural-diagram.png)
