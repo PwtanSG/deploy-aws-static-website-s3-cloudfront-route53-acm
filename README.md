@@ -1,8 +1,7 @@
 # The project
 This project demonstrates how AWS services like S3, CloudFront and Route 53 can be used to host a static website with a SSL cert and a custom domain (Godaddy purchased domain). A simple AWS cloudformation template is used to deploy AWS infrastructure required by the AWS services. 
-
-- CloudFront caches content in edge locations globally, reducing latency for users.
-- S3 : S3 bucket is use to host the application code/files. Access can be restricted to CloudFront, preventing direct public access to S3 bucket.
+- S3 : S3 bucket is use to host the application code/files. 
+- CloudFront caches content in edge locations globally, reducing latency for users and restricted access to CloudFront through OAC(origin access control), preventing direct public access to S3 bucket.
 - Route 53: manage Custom Domain and access of site content via custom domain instead of using an S3 bucket or cloudfront URL.
 - Certification Manager : HTTPS support using CloudFront to provide SSL/TLS certificates via ACM, securing website traffic.
 
@@ -45,3 +44,11 @@ Alternate domain name (CNAME) e.g domain.com &/or www.domain.com and Custom SSL 
 ## invalidating cloudfront cache
 New content may take time to propagate down due to cloudfront cache. Use invalidation aws cli to refresh cache. <br>
 aws cloudfront create-invalidation --distribution-id DistributionID --paths "/*"
+
+
+## resouce clean up
+- remove Route53 HostedZone CName(s) recordset(s)
+- empty all files in S3 bucket(s)
+aws s3 rm s3://$BUCKET_NAME --recursive
+- delete cloudformation stack
+aws cloudformation delete-stack --stack-name static-website
