@@ -6,6 +6,9 @@ This project demonstrates how AWS services like S3, CloudFront and Route 53 can 
 - Route 53: manage Custom Domain and access of site content via custom domain instead of using an S3 bucket or cloudfront URL.
 - Certification Manager : HTTPS support using CloudFront to provide SSL/TLS certificates via ACM, securing website traffic.
 
+## Architectural Diagram
+![screenshot](images/architectural-diagram-1.png)
+
 ## App
 This is a simple frontend. index.html
 
@@ -42,6 +45,3 @@ Alternate domain name (CNAME) e.g domain.com &/or www.domain.com and Custom SSL 
 ## invalidating cloudfront cache
 New content may take time to propagate down due to cloudfront cache. Use invalidation aws cli to refresh cache. <br>
 aws cloudfront create-invalidation --distribution-id DistributionID --paths "/*"
-
-## Architectural Diagram
-![screenshot](images/architectural-diagram-1.png)
