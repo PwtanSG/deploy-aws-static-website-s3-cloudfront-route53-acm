@@ -44,4 +44,4 @@ New content may take time to propagate down due to cloudfront cache. Use invalid
 aws cloudfront create-invalidation --distribution-id DistributionID --paths "/*"
 
 ## Architectural Diagram
-![screenshot](images/architectural-diagram.png)
+![screenshot](images/architectural-diagram-1.png)
