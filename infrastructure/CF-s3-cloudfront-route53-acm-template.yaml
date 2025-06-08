@@ -222,7 +222,7 @@ Resources:
   #             StringEquals:
   #               AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
-  # # Create route 53 hostedzone and A records
+  # # Create route 53 hostedzone A records
   # MyRoute53HostedZone:
   #   Type: AWS::Route53::HostedZone
   #   Properties:
