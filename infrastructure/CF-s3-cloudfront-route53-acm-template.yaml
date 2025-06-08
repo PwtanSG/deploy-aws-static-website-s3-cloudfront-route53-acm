@@ -164,7 +164,7 @@ Resources:
         Enabled: true
         DefaultRootObject: index.html
         Aliases: # Alternate domain name (CNAME)
-          - !Sub "${SubDomain}.${WebsiteDomainName}
+          - !Sub "${SubDomain}.${WebsiteDomainName}"
         Origins:
           - Id: S3OriginSubDomain
             DomainName: !GetAtt StaticWebsiteSubDomainBucketS3.RegionalDomainName
