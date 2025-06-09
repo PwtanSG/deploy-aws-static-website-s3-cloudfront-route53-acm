@@ -1,18 +1,31 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: A basic infra template for static hosting using S3 bucket, CloudFront, Route53 and ACM SSL cert
 # Usage - AWS CLI :  
-# aws cloudformation create-stack --stack-name CreateInfra1 --template-body file://infrastructure/CF-s3-cloudfront-route53-acm-template.yaml --region us-east-1 --profile admin
+# aws cloudformation create-stack
+# --stack-name CreateInfra1 
+# --template-body file://infrastructure/CF-s3-cloudfront-route53-acm-template.yaml
+# --parameters ParameterKey=WebsiteDomainName,ParameterValue=devbranch.online ParameterKey=SubDomain,ParameterValue=www 
+# --region us-east-1 
+# --profile admin
 
 Parameters:
   WebsiteDomainName:
     Type: String
     Description: "Domain name of website"
-    Default: "devbranch.online"  # Optional default value, if not provided, aws console cloudformation will prompt you to enter when "create stack".
+    # Default: "devbranch.online"  # Optional default value, if not provided, aws console cloudformation console will prompt you to enter when "create stack" or parse through AWS CLI
   
   SubDomain:
     Type: String
     Description: "Sub domain e.g www or api"
-    Default: "www"
+    # Default: "www"
+
+  CreateMainDomain:
+    Description: create main domain.
+    Default: yes
+    Type: String
+    AllowedValues:
+      - yes
+      - no
   
   HostedZoneIdForS3:
     Type: String
@@ -24,20 +37,37 @@ Parameters:
     Description: Time To Live (TTL) for the record
     Default: 300
 
+Conditions:
+  CreateMainDomainResource: !Equals
+    - !Ref CreateMainDomain
+    - yes
+
+  CreateSubDomainResource: !Not
+    - !Equals 
+      - !Ref SubDomain
+      - ""
+
+  NoSubDomainResource: !Equals 
+    - !Ref SubDomain
+    - ""  
+
 Outputs:
-  # S3BucketName:
-  #   Description: S3 bucket static host for WebsiteDomainName"
-  #   Value: !Ref StaticWebsiteBucketS3 #Ref logical ID returns the bucket name.
+  S3BucketName:
+    Description: S3 bucket static host for WebsiteDomainName"
+    Condition: CreateMainDomainResource
+    Value: !Ref StaticWebsiteBucketS3 #Ref logical ID returns the bucket name.
 
   S3BucketNameSubDomain:
     Description: S3 bucket static host for WebsiteDomainName with subdomain"
+    Condition: CreateSubDomainResource
     Value: !Ref StaticWebsiteSubDomainBucketS3 #Ref logical ID returns the bucket name.
 
   S3BucketNameSubDomainUrl:
+    Description: URL for website hosted on S3
+    Condition: CreateSubDomainResource
     Value: !GetAtt
       - StaticWebsiteSubDomainBucketS3
       - WebsiteURL
-    Description: URL for website hosted on S3
 
   # S3BucketName2Arn:
   #   Value:
@@ -48,13 +78,15 @@ Outputs:
     Value:
       Ref: CloudFrontOriginAccessControl
 
-  # CloudFrontDist:
-  #   Description: The CloudFront distribution ID.
-  #   Value: 
-  #     Ref: CloudFrontDistribution # returns the CloudFront distribution ID. For example E27LVI50CSW06W
+  CloudFrontDist:
+    Description: The CloudFront distribution ID.
+    Condition: CreateMainDomainResource
+    Value: 
+      Ref: CloudFrontDistribution # returns the CloudFront distribution ID. For example E27LVI50CSW06W
 
   CloudFrontDistSubDomain:
     Description: The CloudFront SubDomain distribution ID.
+    Condition: CreateSubDomainResource
     Value: 
       Ref: CloudFrontSubDomainDistribution # returns the CloudFront distribution ID. For example E27LVI50CSW06W
 
@@ -71,7 +103,7 @@ Outputs:
     Value: !Ref mySSLCertificate
 
 Resources:
-  # Create route 53 hostedzone and A records
+  # Create route 53 hostedzone
   MyRoute53HostedZone:
     Type: AWS::Route53::HostedZone
     Properties:
@@ -87,23 +119,25 @@ Resources:
       ValidationMethod: DNS
 
   # Create private S3 buckets for static hosting
-  # StaticWebsiteBucketS3:
-  #   Type: 'AWS::S3::Bucket'
-  #   Properties:
-  #     BucketName: !Ref WebsiteDomainName
-  #     # WebsiteConfiguration:
-  #     #   RedirectAllRequestsTo:
-  #     #     Protocol: "https"
-  #     #     HostName: !Sub "${SubDomain}.${WebsiteDomainName}"
-  #     # AccessControl: Private
-  #     PublicAccessBlockConfiguration:
-  #       RestrictPublicBuckets: true
-  #       IgnorePublicAcls: true
-  #       BlockPublicPolicy: true
-  #       BlockPublicAcls: true
+  StaticWebsiteBucketS3:
+    Type: 'AWS::S3::Bucket'
+    Condition: CreateMainDomainResource
+    Properties:
+      BucketName: !Ref WebsiteDomainName
+      # WebsiteConfiguration:
+      #   RedirectAllRequestsTo:
+      #     Protocol: "https"
+      #     HostName: !Sub "${SubDomain}.${WebsiteDomainName}"
+      # AccessControl: Private
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
   
   StaticWebsiteSubDomainBucketS3:
     Type: 'AWS::S3::Bucket'
+    Condition: CreateSubDomainResource
     Properties:
       BucketName: !Sub "${SubDomain}.${WebsiteDomainName}"
       # BucketName: !Join [".", [!Ref SubDomain, !Ref WebsiteDomainName]]
@@ -128,42 +162,49 @@ Resources:
         SigningProtocol: sigv4
 
   # Create Cloudfront distributions
-  # CloudFrontDistribution:
-  #   Type: AWS::CloudFront::Distribution
-  #   Properties:
-  #     DistributionConfig:
-  #       Enabled: true
-  #       DefaultRootObject: index.html
-  #       Origins:
-  #         - Id: S3Origin
-  #           DomainName: !GetAtt StaticWebsiteBucketS3.RegionalDomainName
-  #           # DomainName: !Sub ${WebsiteDomainName}.s3.${AWS::Region}.amazonaws.com"
-  #           OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
-  #           # OriginAccessControlId: !Ref CloudFrontOriginAccessControl
-  #           S3OriginConfig:
-  #             OriginAccessIdentity: ""
-  #       DefaultCacheBehavior:
-  #         TargetOriginId: S3Origin
-  #         ViewerProtocolPolicy: redirect-to-https
-  #         AllowedMethods: [GET, HEAD]
-  #         ForwardedValues:
-  #           QueryString: false
-  #       ViewerCertificate:
-  #         CloudFrontDefaultCertificate: true
-  #         # Manually set cloudfront cert to the arn of ACM cert
-  #         # AcmCertificateArn: !Sub "arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/1xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"
-  #         # MinimumProtocolVersion: TLSv1.2_2021
-  #         # SslSupportMethod: sni-only
-
-  CloudFrontSubDomainDistribution:
+  CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     DependsOn:
-      -   mySSLCertificate
+      - StaticWebsiteBucketS3
+      # - mySSLCertificate
     Properties:
       DistributionConfig:
         Enabled: true
         DefaultRootObject: index.html
-        Aliases: # Alternate domain name (CNAME)
+        Aliases: # Alternate domain name (CNAME) if cert available
+          - !Sub "${WebsiteDomainName}"
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt StaticWebsiteBucketS3.RegionalDomainName
+            # DomainName: !Sub ${WebsiteDomainName}.s3.${AWS::Region}.amazonaws.com"
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+            # OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+        ViewerCertificate:
+          # CloudFrontDefaultCertificate: true
+          # AcmCertificateArn: !Sub "arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/1xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx"
+          AcmCertificateArn: !Ref mySSLCertificate
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+
+  CloudFrontSubDomainDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: CreateSubDomainResource
+    DependsOn:
+      - StaticWebsiteSubDomainBucketS3
+      # - mySSLCertificate
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Aliases: # Alternate domain name (CNAME) if cert available
           - !Sub "${SubDomain}.${WebsiteDomainName}"
         Origins:
           - Id: S3OriginSubDomain
@@ -186,8 +227,28 @@ Resources:
           SslSupportMethod: sni-only
 
   # S3 bucket Policy to restrict access only to Cloudfront resource
-  BucketPolicy1:
+  BucketPolicyMainDomain:
     Type: AWS::S3::BucketPolicy
+    Condition: CreateMainDomainResource
+    DependsOn:
+      -   CloudFrontDistribution
+    Properties:
+      Bucket: !Ref StaticWebsiteBucketS3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${WebsiteDomainName}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+
+  BucketPolicySubDomain:
+    Type: AWS::S3::BucketPolicy
+    Condition: CreateSubDomainResource
     DependsOn:
       -   CloudFrontSubDomainDistribution
     Properties:
@@ -203,24 +264,6 @@ Resources:
             Condition:
               StringEquals:
                 AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontSubDomainDistribution}"
-    
-  # BucketPolicy2:
-  #   Type: AWS::S3::BucketPolicy
-  #   DependsOn:
-  #     -   CloudFrontDistribution
-  #   Properties:
-  #     Bucket: !Ref StaticWebsiteBucketS3
-  #     PolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             Service: "cloudfront.amazonaws.com"
-  #           Action: "s3:GetObject"
-  #           Resource: !Sub "arn:aws:s3:::${WebsiteDomainName}/*"
-  #           Condition:
-  #             StringEquals:
-  #               AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   # # Create route 53 hostedzone A records
   # MyRoute53HostedZone:
@@ -228,18 +271,20 @@ Resources:
   #   Properties:
   #     Name: !Ref WebsiteDomainName  # create hostedzone with the same name as domain
 
-  # Route53HostedZoneARecord1:
-  #   Type: 'AWS::Route53::RecordSet'
-  #   Properties:
-  #     HostedZoneId: !GetAtt MyRoute53HostedZone.Id
-  #     Name: !Sub "${WebsiteDomainName}"
-  #     Type: 'A'
-  #     AliasTarget:
-  #       DNSName: !GetAtt CloudFrontDistribution.DomainName
-  #       HostedZoneId: 'Z2FDTNDATAQYW2' # the hosted zone ID applicable only for CloudFront (fixed value)
+  Route53HostedZoneARecord1:
+    Type: 'AWS::Route53::RecordSet'
+    Condition: CreateMainDomainResource
+    Properties:
+      HostedZoneId: !GetAtt MyRoute53HostedZone.Id
+      Name: !Sub "${WebsiteDomainName}"
+      Type: 'A'
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: 'Z2FDTNDATAQYW2' # the hosted zone ID applicable only for CloudFront (fixed value)
 
   Route53HostedZoneARecord2:
     Type: 'AWS::Route53::RecordSet'
+    Condition: CreateSubDomainResource
     DependsOn:
       -   CloudFrontSubDomainDistribution
     Properties:

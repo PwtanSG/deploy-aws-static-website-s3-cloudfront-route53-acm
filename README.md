@@ -46,9 +46,9 @@ New content may take time to propagate down due to cloudfront cache. Use invalid
 aws cloudfront create-invalidation --distribution-id DistributionID --paths "/*"
 
 
-## resouce clean up
+## resource clean up
 - remove Route53 HostedZone CName(s) recordset(s)
 - empty all files in S3 bucket(s)
 aws s3 rm s3://$BUCKET_NAME --recursive
 - delete cloudformation stack
-aws cloudformation delete-stack --stack-name static-website
+aws cloudformation delete-stack --stack-name $STACK_NAME
